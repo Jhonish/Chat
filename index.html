@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat</title>
+  <title>chat</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
 
   <style>
     * {
@@ -12,7 +15,6 @@
 
     html, body {
       margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
       background: #000;
@@ -36,8 +38,8 @@
     h1 {
       font-size: 18px;
       font-weight: 400;
-      margin: 0 0 50px;
       color: #888;
+      margin: 0 0 50px;
     }
 
     .buttons {
@@ -55,7 +57,7 @@
       color: #fff;
       font-size: 17px;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: 0.15s;
     }
 
     button:hover {
@@ -70,7 +72,7 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.88);
     }
 
     .modal.active {
@@ -84,7 +86,6 @@
       border: 1px solid #222;
       border-radius: 10px;
       background: #050505;
-      text-align: left;
     }
 
     .box h2 {
@@ -127,6 +128,11 @@
       border-color: #ddd;
     }
 
+    .submit:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
     .cancel {
       margin-top: 8px;
       border: none;
@@ -147,16 +153,6 @@
       color: #ff5555;
       font-size: 13px;
     }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 20px;
-      }
-
-      button {
-        padding: 16px;
-      }
-    }
   </style>
 </head>
 
@@ -172,11 +168,11 @@
   </main>
 
 
-  <!-- Create Group -->
+  <!-- CREATE -->
   <div class="modal" id="createModal">
     <div class="box">
       <h2>create a group</h2>
-      <p>Choose a nickname to use in the group.</p>
+      <p>Choose the nickname you'll use in the group.</p>
 
       <input
         id="createNickname"
@@ -199,11 +195,11 @@
   </div>
 
 
-  <!-- Join Group -->
+  <!-- JOIN -->
   <div class="modal" id="joinModal">
     <div class="box">
       <h2>join a group</h2>
-      <p>Enter your group code and choose a nickname.</p>
+      <p>Enter the group code and choose a nickname.</p>
 
       <input
         id="groupCode"
@@ -255,136 +251,174 @@
     const joinError = document.getElementById("joinError");
 
 
-    // Open create modal
-    createButton.addEventListener("click", () => {
-      createModal.classList.add("active");
-      createNickname.focus();
-    });
-
-
-    // Open join modal
-    joinButton.addEventListener("click", () => {
-      joinModal.classList.add("active");
-      groupCode.focus();
-    });
-
-
-    // Close modals
-    createCancel.addEventListener("click", () => {
-      createModal.classList.remove("active");
-      createError.style.display = "none";
-    });
-
-    joinCancel.addEventListener("click", () => {
-      joinModal.classList.remove("active");
-      joinError.style.display = "none";
-    });
-
-
-    // Close when clicking outside the box
-    createModal.addEventListener("click", (event) => {
-      if (event.target === createModal) {
-        createModal.classList.remove("active");
-      }
-    });
-
-    joinModal.addEventListener("click", (event) => {
-      if (event.target === joinModal) {
-        joinModal.classList.remove("active");
-      }
-    });
-
-
-    // Generate a random group code
     function generateGroupCode() {
       const characters =
         "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
+      const values = new Uint32Array(32);
+      crypto.getRandomValues(values);
+
       let code = "";
 
-      const array = new Uint32Array(32);
-      crypto.getRandomValues(array);
-
-      for (let i = 0; i < 32; i++) {
-        code += characters[array[i] % characters.length];
+      for (let i = 0; i < values.length; i++) {
+        code += characters[values[i] % characters.length];
       }
 
       return code;
     }
 
 
-    // Create group
-    createSubmit.addEventListener("click", () => {
+    function showError(element, message) {
+      element.textContent = message;
+      element.style.display = "block";
+    }
+
+
+    function hideError(element) {
+      element.style.display = "none";
+    }
+
+
+    createButton.addEventListener("click", () => {
+      createModal.classList.add("active");
+      createNickname.focus();
+    });
+
+
+    joinButton.addEventListener("click", () => {
+      joinModal.classList.add("active");
+      groupCode.focus();
+    });
+
+
+    createCancel.addEventListener("click", () => {
+      createModal.classList.remove("active");
+      hideError(createError);
+    });
+
+
+    joinCancel.addEventListener("click", () => {
+      joinModal.classList.remove("active");
+      hideError(joinError);
+    });
+
+
+    /*
+      CREATE GROUP
+    */
+    createSubmit.addEventListener("click", async () => {
       const nickname = createNickname.value.trim();
 
+      hideError(createError);
+
       if (!nickname) {
-        createError.textContent = "Please enter a nickname.";
-        createError.style.display = "block";
+        showError(createError, "Please enter a nickname.");
         createNickname.focus();
         return;
       }
 
-      const code = generateGroupCode();
+      createSubmit.disabled = true;
+      createSubmit.textContent = "creating...";
 
-      /*
-        For now this only stores the nickname locally.
+      try {
+        const code = generateGroupCode();
 
-        Later, we'll replace this with a request to Supabase
-        that creates the actual group in the database.
-      */
-      localStorage.setItem("nickname", nickname);
+        const { error } = await supabaseClient
+          .from("groups")
+          .insert({
+            code: code
+          });
 
-      // Send user to the future group chat page
-      window.location.href =
-        "groupchat.html?group=" +
-        encodeURIComponent(code);
+        if (error) {
+          console.error(error);
+          throw new Error("Could not create the group.");
+        }
+
+        localStorage.setItem("nickname", nickname);
+
+        window.location.href =
+          "groupchat.html?group=" +
+          encodeURIComponent(code);
+
+      } catch (error) {
+        showError(createError, error.message);
+        createSubmit.disabled = false;
+        createSubmit.textContent = "create group";
+      }
     });
 
 
-    // Join group
-    joinSubmit.addEventListener("click", () => {
+    /*
+      JOIN GROUP
+    */
+    joinSubmit.addEventListener("click", async () => {
       const code = groupCode.value.trim();
       const nickname = joinNickname.value.trim();
 
+      hideError(joinError);
+
       if (!code) {
-        joinError.textContent = "Please enter a group code.";
-        joinError.style.display = "block";
+        showError(joinError, "Please enter a group code.");
         groupCode.focus();
         return;
       }
 
       if (!nickname) {
-        joinError.textContent = "Please enter a nickname.";
-        joinError.style.display = "block";
+        showError(joinError, "Please enter a nickname.");
         joinNickname.focus();
         return;
       }
 
-      localStorage.setItem("nickname", nickname);
+      joinSubmit.disabled = true;
+      joinSubmit.textContent = "checking...";
 
-      // Send user to the group chat page
-      window.location.href =
-        "groupchat.html?group=" +
-        encodeURIComponent(code);
+      try {
+        const { data, error } = await supabaseClient
+          .from("groups")
+          .select("code")
+          .eq("code", code)
+          .maybeSingle();
+
+        if (error) {
+          console.error(error);
+          throw new Error("Could not check the group.");
+        }
+
+        if (!data) {
+          throw new Error("That group doesn't exist.");
+        }
+
+        localStorage.setItem("nickname", nickname);
+
+        window.location.href =
+          "groupchat.html?group=" +
+          encodeURIComponent(code);
+
+      } catch (error) {
+        showError(joinError, error.message);
+        joinSubmit.disabled = false;
+        joinSubmit.textContent = "join group";
+      }
     });
 
 
-    // Enter key support
     createNickname.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         createSubmit.click();
       }
     });
 
-    joinNickname.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        joinSubmit.click();
-      }
-    });
 
     groupCode.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         joinNickname.focus();
+      }
+    });
+
+
+    joinNickname.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        joinSubmit.click();
       }
     });
   </script>
