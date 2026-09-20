@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 400;
+      margin: 0 0 50px;
+      color: #888;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    button {
+      width: 100%;
+      padding: 18px;
+      border: 1px solid #222;
+      border-radius: 8px;
+      background: #050505;
+      color: #fff;
+      font-size: 17px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button:hover {
+      background: #111;
+      border-color: #444;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.85);
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .box {
+      width: 100%;
+      max-width: 380px;
+      padding: 28px;
+      border: 1px solid #222;
+      border-radius: 10px;
+      background: #050505;
+      text-align: left;
+    }
+
+    .box h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .box p {
+      margin: 0 0 24px;
+      color: #777;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 12px;
+      border: 1px solid #222;
+      border-radius: 7px;
+      outline: none;
+      background: #000;
+      color: #fff;
+      font-size: 15px;
+    }
+
+    input:focus {
+      border-color: #555;
+    }
+
+    .submit {
+      margin-top: 4px;
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    .submit:hover {
+      background: #ddd;
+      border-color: #ddd;
+    }
+
+    .cancel {
+      margin-top: 8px;
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .cancel:hover {
+      background: transparent;
+      color: #aaa;
+      border: none;
+    }
+
+    .error {
+      display: none;
+      margin-top: 12px;
+      color: #ff5555;
+      font-size: 13px;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 20px;
+      }
+
+      button {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="container">
+    <h1>chat</h1>
+
+    <div class="buttons">
+      <button id="joinButton">join a group</button>
+      <button id="createButton">create</button>
+    </div>
+  </main>
+
+
+  <!-- Create Group -->
+  <div class="modal" id="createModal">
+    <div class="box">
+      <h2>create a group</h2>
+      <p>Choose a nickname to use in the group.</p>
+
+      <input
+        id="createNickname"
+        type="text"
+        placeholder="nickname"
+        maxlength="24"
+        autocomplete="off"
+      >
+
+      <button class="submit" id="createSubmit">
+        create group
+      </button>
+
+      <button class="cancel" id="createCancel">
+        cancel
+      </button>
+
+      <div class="error" id="createError"></div>
+    </div>
+  </div>
+
+
+  <!-- Join Group -->
+  <div class="modal" id="joinModal">
+    <div class="box">
+      <h2>join a group</h2>
+      <p>Enter your group code and choose a nickname.</p>
+
+      <input
+        id="groupCode"
+        type="text"
+        placeholder="group code"
+        maxlength="100"
+        autocomplete="off"
+      >
+
+      <input
+        id="joinNickname"
+        type="text"
+        placeholder="nickname"
+        maxlength="24"
+        autocomplete="off"
+      >
+
+      <button class="submit" id="joinSubmit">
+        join group
+      </button>
+
+      <button class="cancel" id="joinCancel">
+        cancel
+      </button>
+
+      <div class="error" id="joinError"></div>
+    </div>
+  </div>
+
+
+  <script>
+    const createButton = document.getElementById("createButton");
+    const joinButton = document.getElementById("joinButton");
+
+    const createModal = document.getElementById("createModal");
+    const joinModal = document.getElementById("joinModal");
+
+    const createCancel = document.getElementById("createCancel");
+    const joinCancel = document.getElementById("joinCancel");
+
+    const createSubmit = document.getElementById("createSubmit");
+    const joinSubmit = document.getElementById("joinSubmit");
+
+    const createNickname = document.getElementById("createNickname");
+    const joinNickname = document.getElementById("joinNickname");
+    const groupCode = document.getElementById("groupCode");
+
+    const createError = document.getElementById("createError");
+    const joinError = document.getElementById("joinError");
+
+
+    // Open create modal
+    createButton.addEventListener("click", () => {
+      createModal.classList.add("active");
+      createNickname.focus();
+    });
+
+
+    // Open join modal
+    joinButton.addEventListener("click", () => {
+      joinModal.classList.add("active");
+      groupCode.focus();
+    });
+
+
+    // Close modals
+    createCancel.addEventListener("click", () => {
+      createModal.classList.remove("active");
+      createError.style.display = "none";
+    });
+
+    joinCancel.addEventListener("click", () => {
+      joinModal.classList.remove("active");
+      joinError.style.display = "none";
+    });
+
+
+    // Close when clicking outside the box
+    createModal.addEventListener("click", (event) => {
+      if (event.target === createModal) {
+        createModal.classList.remove("active");
+      }
+    });
+
+    joinModal.addEventListener("click", (event) => {
+      if (event.target === joinModal) {
+        joinModal.classList.remove("active");
+      }
+    });
+
+
+    // Generate a random group code
+    function generateGroupCode() {
+      const characters =
+        "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+      let code = "";
+
+      const array = new Uint32Array(32);
+      crypto.getRandomValues(array);
+
+      for (let i = 0; i < 32; i++) {
+        code += characters[array[i] % characters.length];
+      }
+
+      return code;
+    }
+
+
+    // Create group
+    createSubmit.addEventListener("click", () => {
+      const nickname = createNickname.value.trim();
+
+      if (!nickname) {
+        createError.textContent = "Please enter a nickname.";
+        createError.style.display = "block";
+        createNickname.focus();
+        return;
+      }
+
+      const code = generateGroupCode();
+
+      /*
+        For now this only stores the nickname locally.
+
+        Later, we'll replace this with a request to Supabase
+        that creates the actual group in the database.
+      */
+      localStorage.setItem("nickname", nickname);
+
+      // Send user to the future group chat page
+      window.location.href =
+        "groupchat.html?group=" +
+        encodeURIComponent(code);
+    });
+
+
+    // Join group
+    joinSubmit.addEventListener("click", () => {
+      const code = groupCode.value.trim();
+      const nickname = joinNickname.value.trim();
+
+      if (!code) {
+        joinError.textContent = "Please enter a group code.";
+        joinError.style.display = "block";
+        groupCode.focus();
+        return;
+      }
+
+      if (!nickname) {
+        joinError.textContent = "Please enter a nickname.";
+        joinError.style.display = "block";
+        joinNickname.focus();
+        return;
+      }
+
+      localStorage.setItem("nickname", nickname);
+
+      // Send user to the group chat page
+      window.location.href =
+        "groupchat.html?group=" +
+        encodeURIComponent(code);
+    });
+
+
+    // Enter key support
+    createNickname.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        createSubmit.click();
+      }
+    });
+
+    joinNickname.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        joinSubmit.click();
+      }
+    });
+
+    groupCode.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        joinNickname.focus();
+      }
+    });
+  </script>
+
+</body>
+</html>
